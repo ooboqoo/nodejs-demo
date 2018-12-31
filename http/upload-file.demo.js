@@ -2,7 +2,7 @@
  * 使用七牛云验证文件上传功能
  *
  * ```bash
- * $ node upload-to-qiniu.js d:\123.txt
+ * $ node upload-file.demo.js d:\123.txt
  * ```
  */
 
