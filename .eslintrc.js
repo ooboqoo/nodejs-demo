@@ -9,5 +9,6 @@ module.exports = {
   "plugins": ["jest"],
   "rules": {
     "object-curly-spacing": 0,
+    "no-multi-spaces": 0,
   }
 }

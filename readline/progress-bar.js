@@ -11,7 +11,7 @@ let i = 0
  */
 function render (bar) {
   const arr = new Array(bar.total + 2).fill(bar.incomplete)
-  arr[0] = i++ % 2 ? '/' : '\\'
+  arr[0] = ['/', '-', '\\', '|'][i++ % 4]
   arr[1] = ' '
   arr.fill(bar.complete, 2, bar.curr + 3)
   return arr.join('') + ` ${bar.curr}%`
