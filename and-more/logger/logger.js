@@ -49,7 +49,7 @@ const consoleStream = {
   }
 }
 
-module.exports = class Logger {
+class Logger {
   /**
    * Options:
    * - mode  'development' or 'production'
@@ -112,3 +112,5 @@ module.exports = class Logger {
     wirteLogToStreams(log, level === 'INFO' ? this.infoStream : this.errorStream)
   }
 }
+
+module.exports = Logger
