@@ -73,12 +73,23 @@ class Logger {
    * @param {Error}  [param.err]
    */
   _log ({level, title, content, err}) {
-    content = stringify(content)
-    let str = `${level} [${this.module}] ${title}: ${content}`
+    let str = `${level} [${this.module}] ${title}: `
+
     if (err) {
-      str += ' ' + err.stack
-        ? stringify(err.stack.substring(0, 63))
-        : 'Error: ' + stringify(err.message || err)
+      if (content) {
+        if (typeof err === 'object' && err.stack) {
+          if (err.message) {
+            content = content + ', ' + err.message
+          }
+          str += stringify({message: content, stack: err.stack})
+        } else {
+          str += stringify({message: content, stack: 'Error: ' + (err.message || err)})
+        }
+      } else {
+        str += stringify({message: err.message, stack: err.stack})
+      }
+    } else {
+      str += stringify(content)
     }
     this._write(level, str)
   }
@@ -134,8 +145,8 @@ class Logger {
    * @param {string} moduleName
    *
    * @example
-   * const mlog = log.useModule('RPC')
-   * mlog.info('any title', 'any text')
+   * const childLog = log.useModule('RPC')
+   * childLog.info('any title', 'any text')
    * // output: 2019-04-30 16:43:31.501 INFO [RPC] any title: "any text"
    */
   useModule (moduleName) {
