@@ -1,9 +1,7 @@
-const Logger = require('./logger')
+const { Logger } = require('./logger')
 
-const logger = new Logger()
-const childLogger = logger.child('ChildModule')
+const log = new Logger()
 
-logger.info('some info')
-logger.info('moduleA', 'moduleA info')
-logger.error('moduleB', 'something error in moduleB')
-childLogger.info('child module info')
+log.info('some info')
+log.info('moduleA', 'moduleA info')
+log.error('moduleB', 'something error in moduleB')

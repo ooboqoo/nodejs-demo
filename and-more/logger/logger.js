@@ -1,31 +1,46 @@
 /**
  * Logger
  *
- * References:
- *   - https://github.com/guigrpa/storyboard
- *
  * Example:
  *
  * ```js
- * const Logger = require('./logger')
- * const logger = new Logger()
- * logger.info('test logger')
- * logger.info('moduleA', 'log with moduleName')
- * const childLogger = logger.child('moduleB')
+ * const { log } = require('./logger')
+ * log.info('test logger')
+ * log.info('moduleA', 'log with moduleName')
+ * const childLogger = log.child('moduleB')
  * childLogger.info('test child logger')
  * ```
  * It outputs:
- * 2018-12-31 14:17:30.024  []  INFO  "test logger"
- * 2018-12-31 14:17:30.029  [moduleA]  INFO  "log with moduleName"
- * 2018-12-31 14:17:30.029  [moduleB]  INFO  "test child logger"
+ * 2018-12-31 14:17:30.024 INFO []: test logger
+ * 2018-12-31 14:17:30.029 INFO [moduleA]: log with moduleName
+ * 2018-12-31 14:17:30.029 INFO [moduleB]: test child logger
  */
 
 'use strict'
 
-const now = function () {
-  const now = new Date(Date.now() + 28800000) // GMT+0800
-  return now.toISOString().replace('T', ' ').replace('Z', '')
+const LOG_LEVEL = {
+  NONE: 6,
+  FATAL: 5,
+  ERROR: 4,
+  WARN: 3,
+  INFO: 2,
+  DEBUG: 1,
+  TRACE: 0,
+  ALL: 0
 }
+
+const consoleStream = {
+  write (str) {
+    console.log(str)
+  }
+}
+
+const getDateString = function (serverTimeOffset = 0) {
+  const timezoneOffset = new Date().getTimezoneOffset() * 60 * 1000
+  const now = new Date(Date.now() - timezoneOffset + serverTimeOffset)
+  return now.toISOString().replace(/[TZ]/g, ' ')
+}
+
 const stringify = (data, replacer, space) => {
   try {
     return JSON.stringify(data, replacer, space)
@@ -33,84 +48,157 @@ const stringify = (data, replacer, space) => {
     return '[logger-internal-error] failed to serialize the data!'
   }
 }
-const wirteLogToStreams = (log, streams) => {
-  if (Array.isArray(streams)) {
-    for (let stream of streams) {
-      stream.wirte(log)
-    }
-  } else {
-    streams.write(log)
-  }
-}
-
-const consoleStream = {
-  write (log) {
-    console.log(log)
-  }
-}
 
 class Logger {
   /**
-   * Options:
-   * - mode  'development' or 'production'
-   * - infoStream  where to log info, method `write` is needed
-   * - errorStream  where to log error, method `write` is needed
+   * @param {object} options
+   * @param {string} [options.module]              module name
+   * @param {number} [options.level]               log level
+   * @param {{write}|{write}[]} [options.logDest]  where to log info, method `write` is needed
+   * @param {{write}|{write}[]} [options.errDest]  where to log error, method `write` is needed
    */
-  constructor (options) {
-    this.mode = 'development' // or 'production'
-    this.infoStream = consoleStream
-    this.errorStream = consoleStream
+  constructor (options = {}) {
+    this.module = ''
+    this.level = LOG_LEVEL.INFO
+    this.logDest = consoleStream
+    this.errDest = consoleStream
     this.config(options)
+  }
+
+  /**
+   * @param {object} param
+   * @param {string} param.level
+   * @param {string} param.title
+   * @param {string|Object} param.content
+   * @param {Error}  [param.err]
+   */
+  _log ({level, title, content, err}) {
+    content = stringify(content)
+    let str = `${level} [${this.module}] ${title}: ${content}`
+    if (err) {
+      str += ' ' + err.stack
+        ? stringify(err.stack.substring(0, 63))
+        : 'Error: ' + stringify(err.message || err)
+    }
+    this._write(level, str)
+  }
+
+  _write (level, str) {
+    const log = getDateString() + str
+    const dest = ['ERROR', 'FATAL'].includes(level) ? this.errDest : this.logDest
+
+    if (Array.isArray(dest)) {
+      for (let d of dest) {
+        d.write(log)
+      }
+    } else {
+      dest.write(log)
+    }
+  }
+
+  /**
+   * @return {{title: string, content: string, err: any}}
+   */
+  _normalize (title, content, err) {
+    // two arguments, deal with err
+    if (err === undefined && content !== undefined) {
+      if (content.stack) {
+        err = content
+        content = title
+        title = ''
+      }
+    }
+    // one argument
+    if (err === undefined && content === undefined) {
+      if (title.stack) {
+        err = title
+        title = ''
+        content = ''
+      } else {
+        content = title
+        title = ''
+      }
+    }
+    return {title, content, err}
   }
 
   config (options) {
     Object.assign(this, options)
   }
 
-  child (moduleName) {
-    return new Proxy(this, {
-      get (target, key, receiver) {
-        return (...args) => {
-          target[key](moduleName, ...args)
-        }
-      }
-    })
+  setLevel (level) {
+    this.level = level
   }
 
-  trace (moduleName, data) {
-    if (this.mode === 'production') { return }
-    console.trace('[' + moduleName + '] ', data)
-  }
-
-  debug (moduleName, data) {
-    if (this.mode === 'production') { return }
-    console.debug('[' + moduleName + '] ', data)
-  }
-
-  info (moduleName, data) {
-    this._write('INFO', moduleName, data)
-  }
-
-  warn (moduleName, data) {
-    this._write('WARN', moduleName, data)
-  }
-
-  error (moduleName, data) {
-    this._write('ERROR', moduleName, data)
-  }
-
-  fatal (moduleName, data) {
-    this._write('FATAL', moduleName, data)
-  }
-
-  _write (level, moduleName, data) {
-    if (typeof data === 'undefined') {
-      data = moduleName
-      moduleName = ''
+  /**
+   * @param {string} moduleName
+   *
+   * @example
+   * const mlog = log.useModule('RPC')
+   * mlog.info('any title', 'any text')
+   * // output: 2019-04-30 16:43:31.501 INFO [RPC] any title: "any text"
+   */
+  useModule (moduleName) {
+    return {
+      __proto__: this,
+      module: moduleName
     }
-    const log = `${now()}  [${moduleName}]  ${level}  ` + stringify(data)
-    wirteLogToStreams(log, level === 'INFO' ? this.infoStream : this.errorStream)
+  }
+
+  /**
+   * @param {number} level  log level
+   *
+   * @example
+   * const log = log.useTempLevel(LOG_LEVEL.ERROR)
+   * log.info('this log will be discarded.')
+   */
+  useTempLevel (level) {
+    return {
+      __proto__: this,
+      level
+    }
+  }
+
+  debug (title, content) {
+    if (this.level <= LOG_LEVEL.DEBUG) {
+      const args = this._normalize(title, content)
+      this._log({level: 'DEBUG', title: args.title, content: args.content})
+    }
+  }
+
+  info (title, content) {
+    if (this.level <= LOG_LEVEL.INFO) {
+      const args = this._normalize(title, content)
+      this._log({level: 'INFO', title: args.title, content: args.content})
+    }
+  }
+
+  log (title, content) {
+    this.info(title, content)
+  }
+
+  warn (title, content) {
+    if (this.level <= LOG_LEVEL.WARN) {
+      const args = this._normalize(title, content)
+      this._log({level: 'WARN', title: args.title, content: args.content})
+    }
+  }
+
+  error (title, content, err) {
+    if (this.level <= LOG_LEVEL.ERROR) {
+      const args = this._normalize(title, content, err)
+      this._log({level: 'ERROR', title: args.title, content: args.content, err: args.err})
+    }
+  }
+
+  fatal (title, content, err) {
+    if (this.level <= LOG_LEVEL.FATAL) {
+      const args = this._normalize(title, content, err)
+      this._log({level: 'FATAL', title: args.title, content: args.content, err: args.err})
+    }
   }
 }
 
-module.exports = Logger
+exports.LOG_LEVEL = LOG_LEVEL
+exports.Logger = Logger
+exports.log = new Logger()
