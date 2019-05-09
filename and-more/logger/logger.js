@@ -96,7 +96,7 @@ class Logger {
 
   _write (level, str) {
     const log = getDateString() + str
-    const dest = ['ERROR', 'FATAL'].includes(level) ? this.errDest : this.logDest
+    const dest = ['WARN', 'ERROR', 'FATAL'].includes(level) ? this.errDest : this.logDest
 
     if (Array.isArray(dest)) {
       for (let d of dest) {
