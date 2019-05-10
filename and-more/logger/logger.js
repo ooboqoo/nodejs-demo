@@ -5,15 +5,15 @@
  *
  * ```js
  * const { log } = require('./logger')
- * log.info('test logger')
- * log.info('moduleA', 'log with moduleName')
- * const childLogger = log.child('moduleB')
- * childLogger.info('test child logger')
+ * log.info('my message')
+ * log.info('my title', 'my message')
+ * const childLog = log.useModule('moduleA')
+ * childLog.info('test child logger')
  * ```
  * It outputs:
- * 2018-12-31 14:17:30.024 INFO []: test logger
- * 2018-12-31 14:17:30.029 INFO [moduleA]: log with moduleName
- * 2018-12-31 14:17:30.029 INFO [moduleB]: test child logger
+ * 2019-05-10 19:54:50.589 INFO  [] : "my message"
+ * 2019-05-10 19:54:50.591 INFO  [] my title: "my message"
+ * 2019-05-10 19:54:50.591 INFO  [moduleA] : "test child logger"
  */
 
 'use strict'
@@ -73,7 +73,7 @@ class Logger {
    * @param {Error}  [param.err]
    */
   _log ({level, title, content, err}) {
-    let str = `${level} [${this.module}] ${title}: `
+    let str = `${level}${level.length === 4 ? ' ' : ''} [${this.module}] ${title}: `
 
     if (err) {
       if (content) {
@@ -147,7 +147,7 @@ class Logger {
    * @example
    * const childLog = log.useModule('RPC')
    * childLog.info('any title', 'any text')
-   * // output: 2019-04-30 16:43:31.501 INFO [RPC] any title: "any text"
+   * // output: 2019-04-30 16:43:31.501 INFO  [RPC] any title: "any text"
    */
   useModule (moduleName) {
     return {
@@ -160,13 +160,20 @@ class Logger {
    * @param {number} level  log level
    *
    * @example
-   * const log = log.useTempLevel(LOG_LEVEL.ERROR)
-   * log.info('this log will be discarded.')
+   * const modifiedLog = log.useLevel(LOG_LEVEL.ERROR)
+   * modifiedLog.info('this log will be discarded.')
    */
-  useTempLevel (level) {
+  useLevel (level) {
     return {
       __proto__: this,
       level
+    }
+  }
+
+  trace (title, content) {
+    if (this.level <= LOG_LEVEL.TRACE) {
+      const args = this._normalize(title, content)
+      this._log({level: 'TRACE', title: args.title, content: args.content})
     }
   }
 

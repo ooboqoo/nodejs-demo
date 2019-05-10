@@ -76,7 +76,7 @@ describe('log._log()', () => {
   }
   test('can generate log without err as expected', () => {
     $log._log({level: 'INFO', title: '', content: 'my message'})
-    expect(logOutput[0]).toBe('INFO [] : "my message"')
+    expect(logOutput[0]).toBe('INFO  [] : "my message"')
   })
   test('can generate log with err as expected', () => {
     $log._log({level: 'ERROR', title: '', content: 'my message', err: new Error('error message')})
@@ -154,14 +154,14 @@ describe('log.useTempLevel()', () => {
     log.setLevel(level)
   })
   test('can temporarily change the log level', () => {
-    const childLog = log.useTempLevel(LOG_LEVEL.ERROR)
+    const childLog = log.useLevel(LOG_LEVEL.ERROR)
     childLog.warn('my warn message')
     expect(errOutput.length).toBe(0)
     childLog.error('my error message')
     expect(errOutput[0].substring(24)).toBe('ERROR [] : "my error message"')
   })
   test('not affect log.level', () => {
-    const childLog = log.useTempLevel(LOG_LEVEL.WARN)
+    const childLog = log.useLevel(LOG_LEVEL.WARN)
     expect(log.level).toBe(LOG_LEVEL.INFO)
     expect(childLog.level).toBe(LOG_LEVEL.WARN)
   })
@@ -176,12 +176,12 @@ describe('log.info()', () => {
     log.info('some info')
     expect(logOutput.length).toBe(1)
     expect(logOutput[0].substring(0, 24)).toMatch(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} /)
-    expect(logOutput[0].substring(24)).toBe('INFO [] : "some info"')
+    expect(logOutput[0].substring(24)).toBe('INFO  [] : "some info"')
   })
   test('can log the message content as expected', () => {
     log.info({message: 'my content'})
     expect(logOutput.length).toBe(1)
-    expect(logOutput[0].substring(24)).toBe('INFO [] : {"message":"my content"}')
+    expect(logOutput[0].substring(24)).toBe('INFO  [] : {"message":"my content"}')
   })
 })
 
@@ -210,7 +210,7 @@ describe('log.error()', () => {
   test('can log error string as expected', () => {
     log.error('my error message')
     log.error('my title', 'my error message')
-    log.error('my title', 'my content', 'my error message')  // 不支持这种写法, 'my content' 会被丢弃
+    log.error('my title', 'my content', 'my error message')  // DO NOT SUPPORT! 'my content' will be discarded
     expect(logOutput.length).toBe(0)
     expect(errOutput.length).toBe(3)
     expect(errOutput[0].substring(24)).toBe('ERROR [] : "my error message"')
