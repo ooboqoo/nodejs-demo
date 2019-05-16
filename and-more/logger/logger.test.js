@@ -94,12 +94,18 @@ describe('log._normalize()', () => {
       .toEqual({title: '', content: 'my content', err})
     expect(log._normalize('my title', 'my content', err))
       .toEqual({title: 'my title', content: 'my content', err})
+  })
 
-    const fakeErr = {code: 400, message: 'err'}
-    expect(log._normalize(fakeErr))
-      .toEqual({title: '', content: fakeErr})
-    expect(log._normalize('my title', 'my content', fakeErr))
-      .toEqual({title: 'my title', content: 'my content', err: fakeErr})
+  test('can normalize params with fake Error object', () => {
+    const fakeErr1 = {code: 400, message: 'err'}
+    expect(log._normalize(fakeErr1))
+      .toEqual({title: '', content: fakeErr1})
+    expect(log._normalize('my title', 'my content', fakeErr1))
+      .toEqual({title: 'my title', content: 'my content', err: fakeErr1})
+
+    const fakeErr2 = {message: 'fake error', __stack: 'any string'}
+    expect(log._normalize(fakeErr2))
+      .toEqual({title: '', content: '', err: {message: 'fake error', stack: 'any string'}})
   })
 
   test('can normalize params without err', () => {

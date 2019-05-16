@@ -108,12 +108,17 @@ class Logger {
   }
 
   /**
+   * normalize log params
+   *
+   * Remark of Error object: Because there are some weird cases when handling Error object, so we
+   * support tow kinds of fake Error object: `{message, stack}` and `{message, __stack}`
+   *
    * @return {{title: string, content: string, err: any}}
    */
   _normalize (title, content, err) {
     // two arguments, deal with err
     if (err === undefined && content !== undefined) {
-      if (content.stack) {
+      if (content.stack || content.__stack) {
         err = content
         content = title
         title = ''
@@ -121,7 +126,7 @@ class Logger {
     }
     // one argument
     if (err === undefined && content === undefined) {
-      if (title.stack) {
+      if (title.stack || title.__stack) {
         err = title
         title = ''
         content = ''
@@ -129,6 +134,10 @@ class Logger {
         content = title
         title = ''
       }
+    }
+    if (err && err.__stack) {
+      err.stack = err.__stack
+      delete err.__stack
     }
     return {title, content, err}
   }
