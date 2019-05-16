@@ -161,7 +161,7 @@ class Logger {
   useModule (moduleName) {
     return {
       __proto__: this,
-      module: moduleName
+      module: this.module ? this.module + ' ' + moduleName : moduleName
     }
   }
 

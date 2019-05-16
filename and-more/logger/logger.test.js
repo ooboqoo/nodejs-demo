@@ -83,6 +83,14 @@ describe('log._log()', () => {
     expect(logOutput[0].substring(0, 87))
       .toBe('ERROR [] : {"message":"my message, error message","stack":"Error: error message\\n    at')
   })
+  test('can log module name as expected', () => {
+    const mLog = {
+      __proto__: $log,
+      module: 'RPC'
+    }
+    mLog._log({level: 'INFO', title: '', content: 'my message'})
+    expect(logOutput[0]).toBe('INFO  [RPC] : "my message"')
+  })
 })
 
 describe('log._normalize()', () => {
@@ -116,19 +124,6 @@ describe('log._normalize()', () => {
   })
 })
 
-describe('log.setLevel()', () => {
-  const level = log.level
-  afterEach(() => {
-    log.setLevel(level)
-  })
-  test('can change the log.level', () => {
-    log.setLevel(LOG_LEVEL.INFO)
-    expect(log.level).toBe(LOG_LEVEL.INFO)
-    log.setLevel(LOG_LEVEL.FATAL)
-    expect(log.level).toBe(LOG_LEVEL.FATAL)
-  })
-})
-
 describe('log.level', () => {
   const level = log.level
   beforeEach(() => {
@@ -150,7 +145,20 @@ describe('log.level', () => {
   })
 })
 
-describe('log.useTempLevel()', () => {
+describe('log.setLevel()', () => {
+  const level = log.level
+  afterEach(() => {
+    log.setLevel(level)
+  })
+  test('can change the log.level', () => {
+    log.setLevel(LOG_LEVEL.INFO)
+    expect(log.level).toBe(LOG_LEVEL.INFO)
+    log.setLevel(LOG_LEVEL.FATAL)
+    expect(log.level).toBe(LOG_LEVEL.FATAL)
+  })
+})
+
+describe('log.useLevel()', () => {
   const level = log.level
   beforeEach(() => {
     logOutput.length = 0
@@ -170,6 +178,16 @@ describe('log.useTempLevel()', () => {
     const childLog = log.useLevel(LOG_LEVEL.WARN)
     expect(log.level).toBe(LOG_LEVEL.INFO)
     expect(childLog.level).toBe(LOG_LEVEL.WARN)
+  })
+})
+
+describe('log.useModule()', () => {
+  test('can set module name as expected', () => {
+    const mLog = log.useModule('RPC')
+    const mmLog = mLog.useModule('Video')
+    expect(log.module).toBe('')
+    expect(mLog.module).toBe('RPC')
+    expect(mmLog.module).toBe('RPC Video')
   })
 })
 
