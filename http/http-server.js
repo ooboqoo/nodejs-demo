@@ -1,12 +1,12 @@
-const http = require('http')
+import { createServer } from 'node:http'
 
-const hostname = '0.0.0.0'
+const hostname = '127.0.0.1'
 const port = 3000
 
-const server = http.createServer((req, res) => {
+const server = createServer((req, res) => {
   res.statusCode = 200
 
-  // 提供跨域访问支持
+  // CORS support
   res.setHeader('Access-Control-Allow-Origin', '*')
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Headers', '*')
@@ -14,9 +14,12 @@ const server = http.createServer((req, res) => {
     return
   }
 
-  for (let key in req.headers) {
+  console.log('\n%s %s', req.method, req.url)
+
+  for (const key in req.headers) {
     console.log(key + ': ' + req.headers[key])
   }
+
   req.on('data', (chunk) => {
     console.log('\n', chunk.toString())
   })

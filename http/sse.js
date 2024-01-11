@@ -1,17 +1,22 @@
-const http = require('http')
+import { createServer } from 'node:http'
 
-const HOSTNAME = '127.0.0.1'
-const PORT = 3000
+const hostname = '127.0.0.1'
+const port = 3000
 
-var clientId = 0
-var clients = {} // Keep a map of attached clients
+/**
+ * Keep a map of attached clients
+ * @type {Map<number, import("http").ServerResponse>}
+ */
+const clients = new Map()
+let clientIDSeed = 0
+let waiting = true
 
-const template = `
+const clientHTML = `
 <!DOCTYPE html>
 <html>
   <body>
   <script>
-    var source = new EventSource('/events/')
+    let source = new EventSource('/events/')
     source.onmessage = function(e) {
       document.body.innerHTML += e.data + '<br>'
     }
@@ -19,26 +24,33 @@ const template = `
   </body>
 </html>`
 
-const server = http.createServer((req, res) => {
-  console.log(req.url)
+const generateRandomNumber = (width = 6) => {
+  const max = Math.pow(10, width)
+  const min = Math.pow(10, width - 1)
+  return Math.floor(Math.random() * (max - 1 - min)) + min
+}
+
+const server = createServer((req, res) => {
+  console.log(req.method, req.url)
   res.statusCode = 200
 
   if (req.url === '/') {
-    res.end(template)
+    res.end(clientHTML)
   } else if (req.url === '/events/') {
-    req.socket.setTimeout(Number.MAX_VALUE)
+    req.socket.setTimeout(600_000) // 32-bit signed integer
     res.writeHead(200, {
-      'Content-Type': 'text/event-stream', // <- Important headers
+      'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
+      Connection: 'keep-alive',
     })
-    res.write('\n');
-    (function (clientId) {
-      clients[clientId] = res
+    res.write('\n')
+    ;(function (clientID) {
+      clients.set(clientID, res)
+      waiting = false
       req.on('close', function () {
-        delete clients[clientId]
+        clients.delete(clientID)
       })
-    })(++clientId)
+    })(++clientIDSeed)
   } else {
     res.statusCode = 404
     res.end('Page Not Find.')
@@ -49,14 +61,22 @@ server.on('error', (err) => {
   console.log('Failed to start server: \n', err)
 })
 
-server.listen(PORT, HOSTNAME, () => {
-  console.log(`Server running at http://${HOSTNAME}:${PORT}/`)
+server.listen(port, hostname, () => {
+  console.log(`Server running at http://${hostname}:${port}/`)
+  console.log('Waiting for connections...')
 })
 
 setInterval(function () {
-  const msg = Math.random()
-  console.log('Clients: ' + Object.keys(clients) + ' <- ' + msg)
-  for (let clientId in clients) {
-    clients[clientId].write('data: ' + msg + '\n\n')
+  if (clients.size === 0) {
+    if (!waiting) {
+      console.log('Waiting for connections...')
+      waiting = true
+    }
+    return
+  }
+  const msg = generateRandomNumber()
+  console.log('clients: ' + Array.from(clients.keys()) + ' <- ' + msg)
+  for (const c of clients.values()) {
+    c.write('data: ' + msg + '\n\n')
   }
 }, 2000)

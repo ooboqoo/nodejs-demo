@@ -1,9 +1,12 @@
-const {runTest} = require('./utils')
+import { runTest } from './utils.js'
 
-const regex1 = /<html>[\s\S]*<head>[\s\S]*<\/head>[\s\S]*<body>[\s\S]*<\/body>[\s\S]*<\/html>/
-const regex2 = /<html>[\s\S]*?<head>[\s\S]*?<\/head>[\s\S]*?<body>[\s\S]*?<\/body>[\s\S]*?<\/html>/
-const regex3 = /<html>(?=([\s\S]*?<head>))\1(?=([\s\S]*?<\/head>))\2(?=([\s\S]*?<body>))\3(?=([\s\S]*?<\/body>))\4(?=([\s\S]*?<\/html>))\5/
-let str
+const regex1 =
+  /<html>[\s\S]*<head>[\s\S]*<\/head>[\s\S]*<body>[\s\S]*<\/body>[\s\S]*<\/html>/
+const regex2 =
+  /<html>[\s\S]*?<head>[\s\S]*?<\/head>[\s\S]*?<body>[\s\S]*?<\/body>[\s\S]*?<\/html>/
+const regex3 =
+  /<html>(?=([\s\S]*?<head>))\1(?=([\s\S]*?<\/head>))\2(?=([\s\S]*?<body>))\3(?=([\s\S]*?<\/body>))\4(?=([\s\S]*?<\/html>))\5/
+let str = ''
 
 runTest('regex1', () => regex1.test(str), 10)
 runTest('regex2', () => regex2.test(str), 10)

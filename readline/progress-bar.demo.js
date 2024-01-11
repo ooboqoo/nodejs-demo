@@ -1,9 +1,26 @@
-const ProgressBar = require('./progress-bar')
+import { createInterface } from 'node:readline'
+import ProgressBar from './progress-bar.js'
 
-let progress = 0
-const total = 100
+const readline = createInterface({
+  input: process.stdin,
+  output: process.stdout,
+})
+const total =
+  Number(
+    await new Promise((resolve) => {
+      readline.question('input the total number [0, 100]: ', (answer) => {
+        readline.close()
+        resolve(answer)
+      })
+      readline.write('100')
+    })
+  ) || 100
+
 const bar = new ProgressBar(total)
-function tick () {
+let progress = 0
+
+bar.start()
+;(function tick() {
   setTimeout(() => {
     bar.update(progress++)
     if (progress === total) {
@@ -12,8 +29,5 @@ function tick () {
     } else {
       tick()
     }
-  }, Math.random() * 250 | 0)
-}
-
-bar.start()
-tick()
+  }, (Math.random() * 250) | 0)
+})()

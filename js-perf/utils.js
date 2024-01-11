@@ -1,29 +1,29 @@
-// 测试工具函数
-function runTest (title, fn, times = 1000) {
+/**
+ * Run a test
+ * @param {string} title
+ * @param {Function} fn
+ * @param {number} times
+ */
+export function runTest(title, fn, times = 1000) {
   console.time(title)
-  while (times--) { fn() }
+  while (times--) {
+    fn()
+  }
   console.timeEnd(title)
 }
 
-// 生成随机数组
-function getRandomArray (amount = 1000) {
-  let array = new Array(amount)
-  for (let i = amount; i--;) {
-    array[i] = Math.floor(Math.random() * 1000)
-  }
-  return array
+/**
+ * Generate a random array
+ * @param {number} length
+ */
+export function generateRandomArray(length = 1000) {
+  return Array.from({ length }, () => Math.floor(Math.random() * 1000))
 }
 
-// 生成连续数组
-function getSerialArray (amount = 1000) {
-  let array = new Array(amount)
-  let i = amount
-  while (i--) { array[i] = i }
-  return array
-}
-
-module.exports = {
-  runTest,
-  getRandomArray,
-  getSerialArray
+/**
+ * Generate a serial array
+ * @param {number} length
+ */
+export function generateSerialArray(length = 1000) {
+  return Array.from({ length }, (_, i) => i)
 }

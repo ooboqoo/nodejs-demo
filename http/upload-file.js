@@ -17,32 +17,37 @@ Content-Transfer-Encoding: binary
 --<frontier>--
 */
 
-const http = require('http')
-const fs = require('fs')
-const { URL } = require('url')
+import http from 'node:http'
+import { statSync, createReadStream } from 'node:fs'
+import { URL } from 'node:url'
 
-const boundary = 'boundary' + (Math.random() * 1e6 | 0)
+const boundary = 'boundary' + ((Math.random() * 1e6) | 0)
 
-function dataToBody (data) {
-  let body = ''
-  Object.keys(data).forEach(field => {
-    body += '--' + boundary + '\r\n'
-    body += 'Content-Disposition: form-data; name="' + field + '";\r\n\r\n'
-    body += data[field] + '\r\n'
-  })
-  return body
+/**
+ * Convert form data to body
+ * @param {Record<string, string|number>} data
+ */
+function dataToBody(data) {
+  return Object.keys(data)
+    .map(
+      (field) =>
+        `\n--${boundary}\nContent-Disposition: form-data; name="${field}"\n\n${data[field]}\n`
+    )
+    .join('')
 }
 
 /**
- * 采用 Stream 方式上传文件到远端 Http 服务器
- * @param {string} url      服务器地址
- * @param {string} filePath 待上传的文件的完整路径，含文件名
- * @param {string} fileName 提供给服务器的文件名
- * @param {Object} [data]   附加表单项
- * @param {Function} [onProgress] 处理上传进度的函数
+ * Upload a file to a remote HTTP server using Stream
+ * @param {string} url      Server address
+ * @param {string} filePath The full path of the file to be uploaded
+ * @param {string} fileName The file name provided to the server
+ * @param {Record<string, string|number>} [data]   Additional form items
+ * @param {(v: number) => void} [onProgress] Function to handle upload progress
  */
-exports.uploadFile = (url, filePath, fileName, data, onProgress) => {
-  if (!fileName) { fileName = String(Math.random() * 1e6 | 0) }
+export function uploadFile(url, filePath, fileName, data, onProgress) {
+  if (!fileName) {
+    fileName = String((Math.random() * 1e6) | 0)
+  }
   if (onProgress && typeof onProgress !== 'function') {
     return Promise.reject(new Error('onProgress is not a function'))
   }
@@ -54,27 +59,31 @@ exports.uploadFile = (url, filePath, fileName, data, onProgress) => {
     return Promise.reject(error)
   }
   const options = {
+    method: 'POST',
     protocol: _url.protocol,
     hostname: _url.hostname,
     port: _url.port,
     path: _url.pathname + _url.search,
-    method: 'POST',
     headers: {
-      'Content-Type': 'multipart/form-data; boundary=' + boundary
-    }
+      'Content-Type': 'multipart/form-data; boundary=' + boundary,
+    },
   }
 
-  let stat
   let body = ''
-  let tail = '\r\n--' + boundary + '--'
-  if (data) { body += dataToBody(data) }
-  body +=
-    '--' + boundary + '\r\n' +
-    'Content-Disposition: form-data; name="file"; filename=' + fileName + '\r\n' +
-    'Content-Type: application/octet-stream\r\n' +
-    'Content-Transfer-Encoding: binary\r\n\r\n'
+  const tail = '\n--' + boundary + '--'
+  if (data) {
+    body += dataToBody(data)
+  }
+  body += `
+--${boundary}
+Content-Disposition: form-data; name="file"; filename=${fileName}
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: binary
+
+`
+  let stat
   try {
-    stat = fs.statSync(filePath)
+    stat = statSync(filePath)
   } catch (error) {
     return Promise.reject(error)
   }
@@ -84,30 +93,38 @@ exports.uploadFile = (url, filePath, fileName, data, onProgress) => {
     const req = http.request(options, (res) => {
       const chunks = []
       res.setEncoding('utf8')
-      res.on('data', (chunk) => { chunks.push(chunk) })
+      res.on('data', (chunk) => {
+        chunks.push(chunk)
+      })
       res.on('end', () => {
         let data = chunks.join('')
         try {
           data = JSON.parse(data)
-        } catch (error) { }
+        } catch (error) {}
         resolve(data)
       })
     })
-    req.on('error', (err) => { reject(err) })
+    req.on('error', (err) => {
+      reject(err)
+    })
 
     let uploaded = 0
-    const stream = fs.createReadStream(filePath)
-    stream.on('data', chunk => {
+    const stream = createReadStream(filePath)
+    stream.on('data', (/** @type {Buffer} */ chunk) => {
       uploaded += chunk.byteLength
       if (onProgress) {
-        onProgress(uploaded / stat.size * 100 | 0)
+        onProgress(((uploaded / stat.size) * 100) | 0)
       }
     })
 
     req.write(body)
-    stream.pipe(req, {end: false})
+    stream.pipe(req, { end: false })
     stream.on('end', () => {
       req.end(tail)
     })
   })
 }
+
+export default uploadFile
+
+export const __test__ = { dataToBody, boundary }
